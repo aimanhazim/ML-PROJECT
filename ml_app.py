@@ -110,7 +110,7 @@ if st.button("Assess STD Risk"):
         # Create CatBoost Pool object
         input_for_model = Pool(
             data=input_data,
-            cat_features=cat_features
+            cat_features=catboost_model
         )
         model = cb_model
 
@@ -152,6 +152,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
