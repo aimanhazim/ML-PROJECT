@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import joblib
 import json
+from catboost import Pool
+
 
 
 # Load model artifacts
@@ -98,20 +100,29 @@ if st.button("Assess STD Risk"):
     if model_choice == "Logistic Regression":
         input_for_model = scaler.transform(input_data)
         model = lr_model
+
     elif model_choice == "XGBoost":
         input_for_model = input_data
         model = xgb_model
+
     elif model_choice == "CatBoost":
-        input_for_model = input_data
+        # 🔧 FIXED PART
+        input_for_model = Pool(input_data)
         model = cb_model
+
     else:  # Random Forest
         input_for_model = input_data
         model = rf_model
 
     # Prediction & probability
     prediction = model.predict(input_for_model)[0]
+
+    # CatBoost outputs float class labels → cast to int
+    prediction = int(round(prediction))
+
     probabilities = model.predict_proba(input_for_model)[0]
     confidence = probabilities[prediction]
+
 
     # Map risk levels
     risk_map = {0: " Low Risk", 1: " Moderate Risk", 2: " High Risk"}
@@ -142,5 +153,6 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
