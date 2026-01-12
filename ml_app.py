@@ -39,7 +39,8 @@ st.header("Model Selection")
 model_display_to_key = {
     "Random Forest (recommended)": "Random Forest",
     "Logistic Regression": "Logistic Regression",
-    "XGBoost": "XGBoost"
+    "XGBoost": "XGBoost",
+    "CatBoost": "CatBoost"
 }
 
 selected_display = st.selectbox(
@@ -141,4 +142,5 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
