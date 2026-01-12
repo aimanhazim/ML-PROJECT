@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import joblib
 import json
-from catboost import Pool
 
 
 
@@ -106,20 +105,17 @@ if st.button("Assess STD Risk"):
         model = xgb_model
 
     elif model_choice == "CatBoost":
-        input_for_model = Pool(
-            data=input_data,
-            feature_names=list(input_data.columns)
-        )
+        input_for_model = input_data.values
         model = cb_model
 
     else:  # Random Forest
         input_for_model = input_data
         model = rf_model
 
-    # Prediction & probability
-    prediction = int(model.predict(input_for_model, prediction_type="Class")[0])
+    prediction = int(model.predict(input_for_model)[0])
     probabilities = model.predict_proba(input_for_model)[0]
     confidence = probabilities[prediction]
+
 
 
 
@@ -152,6 +148,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
