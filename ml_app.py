@@ -1,147 +1,165 @@
-import streamlit as st
+import os
 import pandas as pd
 import joblib
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import SMOTE
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 import json
 
 
-# Load model artifacts
-rf_model = joblib.load("rf_model.pkl")
-lr_model = joblib.load("logistic_regression_model.pkl")
-xgb_model = joblib.load("xgboost_model.pkl")
-cb_model = joblib.load("catboost_model.pkl")
+import xgboost as xgb
+from catboost import CatBoostClassifier
 
-scaler = joblib.load("scaler.pkl")  # ONLY for Logistic Regression
-model_columns = joblib.load("model_columns.pkl")
+# ------------------------------------------------
+# Load data
+# ------------------------------------------------
+csv_path = "final_data.csv"
+final_data = pd.read_csv(csv_path)
 
-# Load precomputed metrics
-with open("model_metrics.json") as f:
-    model_metrics = json.load(f)
+X = final_data.drop(columns=["incidence_encoded", "incidence_quartile_custom"])
+y = final_data["incidence_encoded"]
 
+# Adjust target variable to be 0-indexed for models like XGBoost
+y = y - 1
 
-# App config
-
-st.set_page_config(
-    page_title="STD Risk Assessment System",
-    layout="centered"
+# ------------------------------------------------
+# Train-test split
+# ------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
 )
 
-st.title("📊 STD Incidence Risk Assessment")
-st.markdown("""
-This system estimates **population-level STD risk**
-based on demographic, socioeconomic, education, and crime indicators.
-""")
+# ------------------------------------------------
+# SMOTE (train only)
+# ------------------------------------------------
+smote = SMOTE(random_state=42)
+X_train_sm, y_train_sm = smote.fit_resample(X_train, y_train)
+
+# ------------------------------------------------
+# Scaling (ONLY for Logistic Regression)
+# ------------------------------------------------
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train_sm)
+X_test_scaled = scaler.transform(X_test)
+
+# ------------------------------------------------
+# Logistic Regression
+# ------------------------------------------------
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train_scaled, y_train_sm)
+
+# ------------------------------------------------
+# Random Forest (NO scaling)
+# ------------------------------------------------
+rf_model = RandomForestClassifier(
+    n_estimators=300,
+    min_samples_leaf=1,
+    random_state=42,
+    n_jobs=-1
+)
+rf_model.fit(X_train_sm, y_train_sm)
+
+# ------------------------------------------------
+# XGBoost (NO scaling)
+# ------------------------------------------------
+xgb_model = xgb.XGBClassifier(
+    n_estimators=300,
+    max_depth=6,
+    learning_rate=0.1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    eval_metric="mlogloss",
+    use_label_encoder=False,
+    random_state=42
+)
+xgb_model.fit(X_train_sm, y_train_sm)
+
+# ------------------------------------------------
+# CatBoost (NO scaling)
+# ------------------------------------------------
+cb_model = CatBoostClassifier(
+    iterations=300,
+    depth=6,
+    learning_rate=0.1,
+    loss_function="MultiClass",
+    verbose=False,
+    random_seed=42
+)
+cb_model.fit(X_train_sm, y_train_sm)
 
 
-# Model selection
-st.header("Model Selection")
+# ------------------------------------------------
+# Model Evaluation (Test Set)
+# ------------------------------------------------
+metrics = {}
 
-# Display → internal mapping
-model_display_to_key = {
-    "Random Forest (recommended)": "Random Forest",
-    "Logistic Regression": "Logistic Regression",
-    "XGBoost": "XGBoost",
-    "CatBoost": "CatBoost"
+# Random Forest
+rf_pred = rf_model.predict(X_test)
+rf_proba = rf_model.predict_proba(X_test)
+
+metrics["Random Forest"] = {
+    "Accuracy": (rf_pred == y_test).mean(),
+    "Precision": precision_score(y_test, rf_pred, average="macro"),
+    "Recall": recall_score(y_test, rf_pred, average="macro"),
+    "F1-score": f1_score(y_test, rf_pred, average="macro"),
+    "ROC-AUC": roc_auc_score(y_test, rf_proba, multi_class="ovr")
 }
 
-selected_display = st.selectbox(
-    "Choose Prediction Model",
-    list(model_display_to_key.keys()),
-    help="Random Forest is recommended due to its stable and strong overall performance."
-)
+# Logistic Regression (scaled)
+X_test_scaled = scaler.transform(X_test)
+lr_pred = lr.predict(X_test_scaled)
+lr_proba = lr.predict_proba(X_test_scaled)
 
-# Clean internal model name
-model_choice = model_display_to_key[selected_display]
+metrics["Logistic Regression"] = {
+    "Accuracy": (lr_pred == y_test).mean(),
+    "Precision": precision_score(y_test, lr_pred, average="macro"),
+    "Recall": recall_score(y_test, lr_pred, average="macro"),
+    "F1-score": f1_score(y_test, lr_pred, average="macro"),
+    "ROC-AUC": roc_auc_score(y_test, lr_proba, multi_class="ovr")
+}
 
-state = st.selectbox(
-    "State",
-    options=[
-        "Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan",
-        "Pahang", "Perak", "Perlis", "Pulau Pinang",
-        "Sabah", "Sarawak", "Selangor", "Terengganu", "WP Kuala Lumpur"
-    ]
-)
+# XGBoost
+xgb_pred = xgb_model.predict(X_test)
+xgb_proba = xgb_model.predict_proba(X_test)
 
-cases = st.number_input("Previous STD Cases", min_value=0)
-incidence = st.number_input("Incidence Rate", min_value=0.0,step=1.0)
-rape = st.number_input("Reported Rape Cases", min_value=0)
-students = st.number_input("Post-secondary Student Enrolment", min_value=100000, step=1000)
-income_mean = st.number_input("Mean Income (RM)", min_value=1500.0, step=100.0)
-income_median = st.number_input("Median Income (RM)", min_value=3000.0, step=100.0)
+metrics["XGBoost"] = {
+    "Accuracy": (xgb_pred == y_test).mean(),
+    "Precision": precision_score(y_test, xgb_pred, average="macro"),
+    "Recall": recall_score(y_test, xgb_pred, average="macro"),
+    "F1-score": f1_score(y_test, xgb_pred, average="macro"),
+    "ROC-AUC": roc_auc_score(y_test, xgb_proba, multi_class="ovr")
+}
 
+# CatBoost
+cb_pred = cb_model.predict(X_test)
+cb_proba = cb_model.predict_proba(X_test)
 
-# Build input dataframe
-input_data = pd.DataFrame([{
-    "cases": cases,
-    "incidence": incidence,
-    "rape": rape,
-    "students": students,
-    "income_mean": income_mean,
-    "income_median": income_median
-}])
+metrics["CatBoost"] = {
+    "Precision": precision_score(y_test, cb_pred, average="macro"),
+    "Recall": recall_score(y_test, cb_pred, average="macro"),
+    "F1-score": f1_score(y_test, cb_pred, average="macro"),
+    "ROC-AUC": roc_auc_score(y_test, cb_proba, multi_class="ovr")
+}
+with open("model_metrics.json", "w") as f:
+    json.dump(metrics, f, indent=4)
 
-# One-hot encode state
-state_encoded = pd.get_dummies(pd.Series([state]), prefix="state")
-input_data = pd.concat([input_data, state_encoded], axis=1)
+print("✅ Evaluation metrics saved")
 
-# Ensure feature alignment
-for col in model_columns:
-    if col not in input_data.columns:
-        input_data[col] = 0
+# ------------------------------------------------
+# Save artifacts
+# ------------------------------------------------
+joblib.dump(lr, "logistic_regression_model.pkl")
+joblib.dump(rf_model, "rf_model.pkl")
+joblib.dump(xgb_model, "xgboost_model.pkl")
+joblib.dump(cb_model, "catboost_model.pkl")
+joblib.dump(scaler, "scaler.pkl")
+joblib.dump(X.columns.tolist(), "model_columns.pkl")
 
-input_data = input_data[model_columns]
-
-
-# Prediction
-if st.button("Assess STD Risk"):
-
-    # Select proper input for model
-    if model_choice == "Logistic Regression":
-        input_for_model = scaler.transform(input_data)
-        model = lr_model
-    elif model_choice == "XGBoost":
-        input_for_model = input_data
-        model = xgb_model
-    elif model_choice == "CatBoost":
-         input_for_model = input_data
-         model = cb_model
-    else:  # Random Forest
-        input_for_model = input_data
-        model = rf_model
-
-    # Prediction & probability
-    prediction = model.predict(input_for_model)[0]
-    probabilities = model.predict_proba(input_for_model)[0]
-    confidence = probabilities[prediction]
-
-    # Map risk levels
-    risk_map = {0: " Low Risk", 1: " Moderate Risk", 2: " High Risk"}
-
-    # Display results
-    st.subheader("Risk Assessment Result")
-    st.success(f"**Predicted Risk Level:** {risk_map[prediction]}")
-
-    st.markdown(f"**Model Used:** `{model_choice}`")
-
-
-    # Display evaluation metrics
-    st.subheader(" Model Evaluation Metrics (Test Set)")
-
-    metrics = model_metrics[model_choice]
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Precision (Macro)", f"{metrics['Precision']:.3f}")
-        st.metric("Recall (Macro)", f"{metrics['Recall']:.3f}")
-    with col2:
-        st.metric("F1-score (Macro)", f"{metrics['F1-score']:.3f}")
-        st.metric("ROC-AUC (OvR)", f"{metrics['ROC-AUC']:.3f}")
-
-    st.markdown("""
-    **Interpretation**
-    -  Low Risk: Below-average STD incidence
-    -  Moderate Risk: Requires monitoring
-    -  High Risk: Priority for intervention and planning
-    """)
-
-
-
+print("✅ Models, scaler, and columns saved successfully")
