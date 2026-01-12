@@ -108,8 +108,8 @@ if st.button("Assess STD Risk"):
 
     elif model_choice == "CatBoost":
     # CatBoost needs pure numeric matrix
-    input_for_model = input_data.values
-    model = cb_model
+        input_for_model = input_data.values
+        model = cb_model
 
     else:  # Random Forest
         input_for_model = input_data
@@ -149,6 +149,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
