@@ -101,9 +101,19 @@ if st.button("Assess STD Risk"):
     elif model_choice == "XGBoost":
         input_for_model = input_data
         model = xgb_model
+    from catboost import Pool
+
     elif model_choice == "CatBoost":
-        input_for_model = input_data
-        model = cb_model
+    # Ensure correct column order
+    input_data = input_data[model_columns]
+
+    # Create CatBoost Pool object
+    input_for_model = Pool(
+        data=input_data,
+        cat_features=cat_features
+    )
+    model = cb_model
+
     else:  # Random Forest
         input_for_model = input_data
         model = rf_model
@@ -142,6 +152,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
