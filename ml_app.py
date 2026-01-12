@@ -90,28 +90,20 @@ for col in model_columns:
 
 input_data = input_data[model_columns]
 
-from catboost import Pool
 
 # Prediction
 if st.button("Assess STD Risk"):
 
-    # Select proper input for model
     if model_choice == "Logistic Regression":
-        input_for_model = scaler.transform(input_data)
+        input_for_model = scaler.transform(input_data.values)
         model = lr_model
+
     elif model_choice == "XGBoost":
         input_for_model = input_data
         model = xgb_model
 
     elif model_choice == "CatBoost":
-        # Ensure correct column order
-        input_data = input_data[model_columns]
-
-        # Create CatBoost Pool object
-        input_for_model = Pool(
-            data=input_data,
-            cat_features=catboost_model
-        )
+        input_for_model = input_data
         model = cb_model
 
     else:  # Random Forest
@@ -121,20 +113,19 @@ if st.button("Assess STD Risk"):
     # Prediction & probability
     prediction = model.predict(input_for_model)[0]
     probabilities = model.predict_proba(input_for_model)[0]
-    confidence = probabilities[prediction]
+    confidence = probabilities[int(prediction)]
 
     # Map risk levels
-    risk_map = {0: " Low Risk", 1: " Moderate Risk", 2: " High Risk"}
+    risk_map = {0: "Low Risk", 1: "Moderate Risk", 2: "High Risk"}
 
-    # Display results
     st.subheader("Risk Assessment Result")
-    st.success(f"**Predicted Risk Level:** {risk_map[prediction]}")
+    st.success(f"**Predicted Risk Level:** {risk_map[int(prediction)]}")
+    st.info(f"Prediction Confidence: {confidence:.2%}")
 
     st.markdown(f"**Model Used:** `{model_choice}`")
 
-
     # Display evaluation metrics
-    st.subheader(" Model Evaluation Metrics (Test Set)")
+    st.subheader("Model Evaluation Metrics (Test Set)")
 
     metrics = model_metrics[model_choice]
 
@@ -146,12 +137,14 @@ if st.button("Assess STD Risk"):
         st.metric("F1-score (Macro)", f"{metrics['F1-score']:.3f}")
         st.metric("ROC-AUC (OvR)", f"{metrics['ROC-AUC']:.3f}")
 
+
     st.markdown("""
     **Interpretation**
     -  Low Risk: Below-average STD incidence
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
