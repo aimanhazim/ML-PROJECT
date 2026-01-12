@@ -118,19 +118,19 @@ if st.button("Assess STD Risk"):
     # Prediction & probability
    raw_pred = model.predict(input_for_model)
 
-# Handle different model outputs safely
-if isinstance(raw_pred, (list, tuple)) or hasattr(raw_pred, "__len__"):
-    prediction = int(raw_pred[0])
-else:
-    prediction = int(raw_pred)
+    # Handle different model outputs safely
+    if isinstance(raw_pred, (list, tuple)) or hasattr(raw_pred, "__len__"):
+        prediction = int(raw_pred[0])
+    else:
+        prediction = int(raw_pred)
 
-probabilities = model.predict_proba(input_for_model)
+    probabilities = model.predict_proba(input_for_model)
 
-# For safety, take the first row if it's 2D
-if probabilities.ndim == 2:
-    probabilities = probabilities[0]
+    # For safety, take the first row if it's 2D
+    if probabilities.ndim == 2:
+        probabilities = probabilities[0]
 
-confidence = float(probabilities[prediction])
+    confidence = float(probabilities[prediction])
 
 
     # Map risk levels
@@ -162,6 +162,7 @@ confidence = float(probabilities[prediction])
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
