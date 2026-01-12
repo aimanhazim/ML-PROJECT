@@ -94,6 +94,10 @@ input_data = input_data[model_columns]
 # Prediction
 if st.button("Assess STD Risk"):
 
+    # Ensure correct order & numeric type for all models
+    input_data = input_data[model_columns]
+    input_data = input_data.astype(float)
+
     if model_choice == "Logistic Regression":
         input_for_model = scaler.transform(input_data.values)
         model = lr_model
@@ -103,8 +107,9 @@ if st.button("Assess STD Risk"):
         model = xgb_model
 
     elif model_choice == "CatBoost":
-        input_for_model = input_data
-        model = cb_model
+    # CatBoost needs pure numeric matrix
+    input_for_model = input_data.values
+    model = cb_model
 
     else:  # Random Forest
         input_for_model = input_data
