@@ -94,9 +94,9 @@ input_data = input_data[model_columns]
 
 
 # Prediction
+# Prediction
 if st.button("Assess STD Risk"):
 
-    # Select proper input for model
     if model_choice == "Logistic Regression":
         input_for_model = scaler.transform(input_data)
         model = lr_model
@@ -106,8 +106,10 @@ if st.button("Assess STD Risk"):
         model = xgb_model
 
     elif model_choice == "CatBoost":
-        # 🔧 FIXED PART
-        input_for_model = Pool(input_data)
+        input_for_model = Pool(
+            data=input_data,
+            feature_names=list(input_data.columns)
+        )
         model = cb_model
 
     else:  # Random Forest
@@ -115,13 +117,10 @@ if st.button("Assess STD Risk"):
         model = rf_model
 
     # Prediction & probability
-    prediction = model.predict(input_for_model)[0]
-
-    # CatBoost outputs float class labels → cast to int
-    prediction = int(round(prediction))
-
+    prediction = int(model.predict(input_for_model, prediction_type="Class")[0])
     probabilities = model.predict_proba(input_for_model)[0]
     confidence = probabilities[prediction]
+
 
 
     # Map risk levels
@@ -153,6 +152,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
