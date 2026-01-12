@@ -90,6 +90,7 @@ for col in model_columns:
 
 input_data = input_data[model_columns]
 
+from catboost import Pool
 
 # Prediction
 if st.button("Assess STD Risk"):
@@ -101,7 +102,6 @@ if st.button("Assess STD Risk"):
     elif model_choice == "XGBoost":
         input_for_model = input_data
         model = xgb_model
-    from catboost import Pool
 
     elif model_choice == "CatBoost":
         # Ensure correct column order
@@ -152,6 +152,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
