@@ -104,15 +104,15 @@ if st.button("Assess STD Risk"):
     from catboost import Pool
 
     elif model_choice == "CatBoost":
-    # Ensure correct column order
-    input_data = input_data[model_columns]
+        # Ensure correct column order
+        input_data = input_data[model_columns]
 
-    # Create CatBoost Pool object
-    input_for_model = Pool(
-        data=input_data,
-        cat_features=cat_features
-    )
-    model = cb_model
+        # Create CatBoost Pool object
+        input_for_model = Pool(
+            data=input_data,
+            cat_features=cat_features
+        )
+        model = cb_model
 
     else:  # Random Forest
         input_for_model = input_data
