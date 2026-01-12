@@ -112,7 +112,7 @@ if st.button("Assess STD Risk"):
         input_for_model = input_data
         model = rf_model
 
-    prediction = int(model.predict(input_for_model)[0])
+    prediction = int(model.predict(input_for_model).item())
     probabilities = model.predict_proba(input_for_model)[0]
     confidence = probabilities[prediction]
 
@@ -148,6 +148,7 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
 
 
