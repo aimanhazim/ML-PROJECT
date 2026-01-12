@@ -8,7 +8,7 @@ import json
 rf_model = joblib.load("rf_model.pkl")
 lr_model = joblib.load("logistic_regression_model.pkl")
 xgb_model = joblib.load("xgboost_model.pkl")
-#cb_model = joblib.load("catboost_model.pkl")
+cb_model = joblib.load("catboost_model.pkl")
 
 scaler = joblib.load("scaler.pkl")  # ONLY for Logistic Regression
 model_columns = joblib.load("model_columns.pkl")
@@ -100,9 +100,9 @@ if st.button("Assess STD Risk"):
     elif model_choice == "XGBoost":
         input_for_model = input_data
         model = xgb_model
-    #elif model_choice == "CatBoost":
-     #   input_for_model = input_data
-     #   model = cb_model
+    elif model_choice == "CatBoost":
+         input_for_model = input_data
+         model = cb_model
     else:  # Random Forest
         input_for_model = input_data
         model = rf_model
@@ -141,4 +141,5 @@ if st.button("Assess STD Risk"):
     -  Moderate Risk: Requires monitoring
     -  High Risk: Priority for intervention and planning
     """)
+
 
